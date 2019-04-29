@@ -266,8 +266,9 @@ template <class RandomAccessIterator, class Compare> class Private
                     auto v0 = std::move(*i0);
                     auto v1 = std::move(*i1);
                     
+                    auto nTop = mnTop;
                     auto Comp = mComp;
-                    while (true){
+                    for (; nTop; --nTop){
                         if (Comp(v1, v0)){
                             *iJoin++ = std::move(v1);
                             if (--n1){
@@ -301,6 +302,12 @@ template <class RandomAccessIterator, class Compare> class Private
                                 }
                             }
                         }
+                    }
+                    if (nTop == 0){
+                        iJoin = Copy(iJoin, i0, n0, v0);
+                        if (o0) iJoin = Copy(iJoin, rPart0.a[Part::oAsc], rPart0.n[Part::oAsc]);
+                        iJoin = Copy(iJoin, i1, n1, v1);
+                        if (o1) iJoin = Copy(iJoin, rPart1.a[Part::oAsc], rPart1.n[Part::oAsc]);
                     }
                     
                     rUnit.a = aJoin;
@@ -432,22 +439,23 @@ template <class RandomAccessIterator, class Compare> class Private
                         auto aDsc = raDsc;
                         auto eDsc = aDsc;
                         
-                        auto iMin = aAsc;
-                        auto iMax = aAsc + mnTop;
-                        iMax = (iMax < eAsc)? iMax: eAsc;
-                        
                         auto iOdd = eAsc;
                         auto nOdd = std::distance(iOdd, eSrc);
-                        for (; nOdd; --nOdd){
-                            if (Comp(*iOdd, iMax[-1])){
-                                if (Comp(*iOdd, iMin[0])){
-                                    *--aDsc = std::move(*iOdd++);
-                                    iMin = aDsc;
-                                } else {
-                                    break;
+                        if (nOdd){
+                            if (Comp(*iOdd, aAsc[0]/*Min*/)){
+                                *--aDsc = std::move(*iOdd++);
+                                
+                                while (--nOdd){
+                                    if (Comp(*iOdd, eAsc[-1]/*Max*/)){
+                                        if (Comp(*iOdd, aDsc[0]/*Min*/)){
+                                            *--aDsc = std::move(*iOdd++);
+                                        } else {
+                                            break;
+                                        }
+                                    } else {
+                                        *eAsc++ = std::move(*iOdd++);
+                                    }
                                 }
-                            } else {
-                                *eAsc++ = std::move(*iOdd++);
                             }
                         }
                         
@@ -510,7 +518,7 @@ template <class RandomAccessIterator, class Compare> class Private
                 
                 void Sort()
                 {
-                    if (mnOriginal > 1 && mnTop >= 0 && mnTop <= mnOriginal){
+                    if (mnOriginal > 1 && mnTop > 0 && mnTop <= mnOriginal){
                         Auto nDive = LowerLimit((MsbAlignment(mnOriginal) - cbIns), 1);
                         Auto aDive = local_array(Dive, (nDive+1));
                         for (int oDive = 0; oDive < nDive; ++oDive) aDive[oDive].miJoin = (oDive & Bit(0))? maExternal.begin(): maOriginal.begin();
