@@ -155,6 +155,13 @@ void init(eSrc Src, std::vector<Test>& a, std::mt19937& rRand, std::uniform_int_
     }
 }
 
+void time(const char* p, std::vector<double>& a, int nLoop)
+{
+    std::cout << p;
+    for (auto& v : a) std::cout << std::fixed << std::setprecision(8) << " " << (v / nLoop);
+    std::cout << std::endl;
+}
+
 
 
 void test(eSrc Src, int nTest, int nLoop)
@@ -165,22 +172,21 @@ void test(eSrc Src, int nTest, int nLoop)
     auto a = std::vector<Test>(nTest);
     
     #if defined(NDEBUG)//[
-    int nTop = nTest / 100;
+    int nLap = 10;
+    int nTop = 100;
     #else//][
     int nTop = nTest / 10;
     #endif//]
     nTop = (nTop)? nTop:1;
     
-    printf("\n--- %s %d\n", apSrc[Src], nTest);
+    std::cout << "\n--- " << apSrc[Src] << " " << nTest << std::endl;
     
     #if defined(NDEBUG)//[
     {   // 
-        double t0 = 0;
-        double t1 = 0;
-        double t2 = 0;
-        double t3 = 0;
-        double t4 = 0;
-        double t5 = 0;
+        std::vector<double> t0(nLap);
+        std::vector<double> t1(nLap);
+        std::vector<double> t2(nLap);
+        std::vector<double> t3(nLap);
         
         for (auto n = nLoop; n; --n){
             init(Src, a, Rand, Range);
@@ -190,7 +196,7 @@ void test(eSrc Src, int nTest, int nLoop)
                 auto s = a;
                 auto l = Lapse::Now();
                 std::sort(s.begin(), s.end());
-                t0 += Lapse::Now() - l;
+                t0[0] += Lapse::Now() - l;
             }
             #endif//]
             
@@ -199,71 +205,41 @@ void test(eSrc Src, int nTest, int nLoop)
                 auto s = a;
                 auto l = Lapse::Now();
                 std::stable_sort(s.begin(), s.end());
-                t1 += Lapse::Now() - l;
+                t1[0] += Lapse::Now() - l;
             }
             #endif//]
             
             #if 1//[
             {   // 
                 auto s = a;
-                auto l = Lapse::Now();
-                std::partial_sort(s.begin(), s.begin() + nTop, s.end());
-                t2 += Lapse::Now() - l;
-            }
-            #endif//]
-            
-            #if 1//[
-            {   // 
-                auto s = a;
-                auto l = Lapse::Now();
-                SakaiShiki::sort(s.begin(), s.begin() + nTop, s.end());
-                t3 += Lapse::Now() - l;
-            }
-            #endif//]
-            
-            #if 1//[
-            {   // 
-                auto s = a;
-                auto l = Lapse::Now();
-                {   // 
-                    auto i = s.begin();
-                    auto e = s.end();
-                    while (i != e){
-                        auto o = std::distance(i, e);
-                        o = (o < nTop)? o: nTop;
-                        std::partial_sort(i, i + o, e);
-                        i += o;
-                    }
+                auto i = s.begin();
+                auto e = s.end();
+                for (auto t = 0; t < nLap; ++t, i += nTop){
+                    auto l = Lapse::Now();
+                    std::partial_sort(i, i + nTop, e);
+                    t2[t] += Lapse::Now() - l;
                 }
-                t4 += Lapse::Now() - l;
             }
             #endif//]
             
             #if 1//[
             {   // 
                 auto s = a;
-                auto l = Lapse::Now();
-                {   // 
-                    auto i = s.begin();
-                    auto e = s.end();
-                    while (i != e){
-                        auto o = std::distance(i, e);
-                        o = (o < nTop)? o: nTop;
-                        SakaiShiki::sort(i, i + o, e);
-                        i += o;
-                    }
+                auto i = s.begin();
+                auto e = s.end();
+                for (auto t = 0; t < nLap; ++t, i += nTop){
+                    auto l = Lapse::Now();
+                    SakaiShiki::sort(i, i + nTop, e);
+                    t3[t] += Lapse::Now() - l;
                 }
-                t5 += Lapse::Now() - l;
             }
             #endif//]
         }
         
-        printf("std::sort         : "); Lapse::Out(t0 / nLoop);
-        printf("std::stable_sort  : "); Lapse::Out(t1 / nLoop);
-        printf("std::partial_sort : "); Lapse::Out(t2 / nLoop);
-        printf("SakaiShiki::sort  : "); Lapse::Out(t3 / nLoop);
-        printf("std::partial_sort : "); Lapse::Out(t4 / nLoop);
-        printf("SakaiShiki::sort  : "); Lapse::Out(t5 / nLoop);
+        time("std::sort", t0, nLoop);
+        time("std::stable_sort", t1, nLoop);
+        time("std::partial_sort", t2, nLoop);
+        time("SakaiShiki::sort", t3, nLoop);
     }
     #else//][
     for (auto n = nLoop; n; --n){
